@@ -1,29 +1,6 @@
 #ifdef __WIN32__
 #include <winsock2.h>
 #include <ws2tcpip.h>
-
-int inet_pton(int af, const char* src, void* dst) {
-	struct sockaddr_storage ss;
-	int size = sizeof(ss);
-	char src_copy[INET6_ADDRSTRLEN + 1];
-
-	ZeroMemory(&ss, sizeof(ss));
-	strncpy(src_copy, src, INET6_ADDRSTRLEN + 1);
-	src_copy[INET6_ADDRSTRLEN] = 0;
-
-	if(WSAStringToAddress(src_copy, af, NULL, (struct sockaddr*) &ss, &size) == 0) {
-		switch(af) {
-			case AF_INET:
-				*(struct in_addr*) dst = ((struct sockaddr_in*) &ss)->sin_addr;
-				return 1;
-			case AF_INET6:
-				*(struct in6_addr*) dst = ((struct sockaddr_in6*) &ss)->sin6_addr;
-				return 1;
-		}
-	}
-
-	return 0;
-}
 #else
 #include <arpa/inet.h>
 #endif
@@ -72,8 +49,7 @@ int main(int argc, const char* argv[]) {
 	memset(&address, 0, sizeof(address));
 	address.sin_family = AF_INET;
 	address.sin_port = htons(5000);
-	inet_pton(AF_INET, argv[1], &address.sin_addr);
-
+	address.sin_addr.s_addr = inet_addr(argv[1]);
 	if(connect(sock, (struct sockaddr *) &address, sizeof(address)) < 0) {
 		printf("Failed to connect: %s\n", strerror(errno));
 #ifdef __WIN32__
