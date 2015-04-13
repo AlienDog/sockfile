@@ -3,10 +3,7 @@
 
 char* sockGetErrorString() {
     char *s = NULL;
-    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                   NULL, (DWORD) WSAGetLastError(),
-                   MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                  (LPSTR) &s, 0, NULL);
+    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD) WSAGetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR) &s, 0, NULL);
     return s;
 }
 #else
@@ -17,7 +14,6 @@ char* sockGetErrorString() {
 #endif
 
 #include <fcntl.h>
-#include <string.h>
 #include <unistd.h>
 
 #include <string>
@@ -78,7 +74,13 @@ int main(int argc, const char* argv[]) {
         fileSize = (((uint64_t) htonl((uint32_t) fileSize)) << 32) + htonl((uint32_t) (fileSize >> 32));
     }
 
-    send(sock, (char*) &fileSize, sizeof(fileSize), 0);
+    if(send(sock, (char*) &fileSize, sizeof(fileSize), 0) < 0) {
+        printf("Failed to send info: %s\n", sockGetErrorString());
+#ifdef __WIN32__
+        WSACleanup();
+#endif
+        return -1;
+    }
 
     printf("Sending file...\n");
     fflush(stdout);
@@ -87,7 +89,13 @@ int main(int argc, const char* argv[]) {
     void* buf = malloc(bufSize);
     for(uint64_t pos = 0; pos < size; pos += bufSize) {
         size_t read = fread(buf, 1, bufSize, fd);
-        send(sock, (char*) buf, read, 0);
+        if(send(sock, (char*) buf, read, 0) < 0) {
+            printf("Failed to send file (pos %d): %s\n", pos, sockGetErrorString());
+#ifdef __WIN32__
+            WSACleanup();
+#endif
+            return -1;
+        }
     }
 
     printf("Waiting for server to finish receiving...\n");
