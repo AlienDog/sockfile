@@ -44,7 +44,7 @@ public class Main {
 			out.writeLong(file.length());
 
 			System.out.println("Sending file...");
-			byte buffer[] = new byte[1024 * 16];
+			byte buffer[] = new byte[1024 * 128];
 			int length = 0;
 			while((length = in.read(buffer)) != -1) {
 				out.write(buffer, 0, length);
